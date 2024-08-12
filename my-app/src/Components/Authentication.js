@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "./Authentication.css";
 import image from "./image.png";
+import axios from "axios";
 
 export default function SignUp({ login }) {
   const [firstName, setFirstName] = useState("");
@@ -11,36 +12,56 @@ export default function SignUp({ login }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [budgetLimit, setBudgetLimit] = useState("");
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       toast.error("Incorrect Password");
-    } else {
-      const users = JSON.parse(localStorage.getItem("users")) || [];
-      const existingUser = users.find((u) => u.email === email);
+    } 
+    else {
+      try
+      {
+        const response=await axios.get(`http://localhost:8080/budgetUser`, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        })
+        if(!response)
+        {
+          throw new Error("Error in geting data")
+        }
+        const existingUser = await response.data.find((u) => u.email === email);
       if (existingUser) {
         toast.error("User already exist. Please Sign in!");
         return;
+        
       }
-      const newUser = {
-        firstName,
-        lastName,
-        email,
-        password,
-        confirmPassword,
-        budgetLimit,
-        entries: [],
-      };
-      users.push(newUser);
-      localStorage.setItem("users", JSON.stringify(users));
-      login(newUser);
+
+      }
+      catch(error)
+      {
+        alert(error)
+      }
+      try{
+        const response= await axios.post(`http://localhost:8080/budgetUser`,{
+          firstName,
+          lastName,
+          email,
+          password,
+          confirmPassword,
+          budgetLimit,
+          entries: [],
+        })
+        if(!response)
+        {
+          throw new Error("Cannot Post Data")
+        }
+        login(response.data)
+      }
+      catch(error)
+      {
+        console.log(error)
+      }
+      
     }
-    // setFirstName('');
-    // setLastName('');
-    // setEmail('');
-    // setPassword('');
-    // setConfirmPassword('');
-    // setBudgetLimit('');
   };
   return (
     <div className="container">
@@ -117,10 +138,16 @@ export default function SignUp({ login }) {
 export function SignIn({ login }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem("users")) || [];
-    const user = users.find(
+    try
+      {
+        const response=await axios.get(`http://localhost:8080/budgetUser`)
+        if(!response)
+        {
+          throw new Error("Error in geting data")
+        }
+        const user =await(response.data).find(
       (u) => u.email === email && u.password === password
     );
     if (user) {
@@ -129,7 +156,12 @@ export function SignIn({ login }) {
     } else {
       toast.error("Invalid Email or Password");
     }
+  }
+  catch(error)
+  {
+    console.log(error)
   };
+}
   return (
     <div className="container">
       <div className="signup">
