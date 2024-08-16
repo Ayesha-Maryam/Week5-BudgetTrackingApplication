@@ -65,7 +65,7 @@ ChartJS.register(
       labels: filteredEntries.map(entry => entry.date),
       datasets: [
         {
-          label: 'Expenses',
+          label: 'Budget',
           data: filteredEntries.map(entry => entry.price),
           borderColor: 'rgba(75, 192, 192, 1)',
           borderWidth: 2,
