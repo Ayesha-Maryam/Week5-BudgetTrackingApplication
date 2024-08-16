@@ -11,7 +11,7 @@ body{
 }
 .signup
 {
-    margin-top: 30px;
+    margin-top: 110px;
     display:flex;
     width:70%;
     height: auto;
@@ -30,7 +30,7 @@ body{
 .left-container h3{
     color:white;
     text-align: center;
-    margin-top: 200px;
+    margin-top: 130px;
     font-size: 30px;
     
 }
@@ -38,7 +38,7 @@ img{
     width:50%;
     height:100%;
     align-self: center;
-    margin-bottom: 100px;
+    margin-bottom: 50px;
 }
 .right-container
 {
@@ -48,7 +48,7 @@ img{
     border-radius: 5px;
 }
 .right-container h3{
-    margin-top: 100px;
+    margin-top: 50px;
 }
 .form-content
 {
@@ -81,4 +81,7 @@ img{
     width:80%;
     margin-bottom: 5px;
     padding: 10px;
+}
+button{
+    cursor:pointer
 }

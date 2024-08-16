@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Route, Routes, useNavigate } from "react-router-dom";
 import SignUp, { SignIn } from "./Components/Authentication";
-import AddBudget from "./Components/BudgetForm";
 import ShowBudget from "./Components/ShowBudget";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import Navbar from "./Components/Navbar";
 
 function App() {
   const [users, setUsers] = useState(null);
@@ -52,14 +51,15 @@ function App() {
       console.log(error);
     }
 
-    navigate("/budget");
+    navigate("/");
   };
 
-  const logOut = () => {
+  const logOut = (setShow, show) => {
     localStorage.removeItem("currentUser");
     setUsers(null);
     setEntries([]);
-    navigate("/");
+    setShow(!show);
+    navigate("/signup");
   };
 
   const addBudget = async (entry) => {
@@ -80,54 +80,14 @@ function App() {
     }
   };
 
-  const handleDelete = async (index) => {
-    //budgetId
-    const filteredEntry = entries.filter((_, i) => /* _.id */ i !== index);
-    try {
-      const response = await axios.put(
-        `http://localhost:8080/budgetUser/${users._id}`,
-        {
-          ...users,
-          entries: filteredEntry,
-        }
-      );
-      setEntries(response.data.entries || []);
-      toast.success("Entry Deleted");
-      if (!response) {
-        //// ?budgetId=${budgetId}
-        alert("No Response");
-        throw new Error("Cannot fetch Data");
-      } else {
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  
 
-  const handleEdit = async (index, updatedEntry) => {
-    const editedEntry = [...entries];
-    editedEntry[index] = updatedEntry;
-    try {
-      const response = await axios.put(
-        `http://localhost:8080/budgetUser/${users._id}`,
-        {
-          ...users,
-          entries: editedEntry,
-        }
-      );
-      if (!response) {
-        throw new Error("Cannot Fetch Data");
-      }
-      setEntries([...response.data.entries] || []);
-    } catch (error) {
-      console.log(error);
-    }
-  };
   return (
     <>
+    <Navbar currentUser={users} logout={logOut}/>
       <Routes>
       <Route
-          path="/budget"
+          path="/"
           element={
             users ? (
               <>
@@ -137,8 +97,6 @@ function App() {
                   limit={users.budgetLimit}
                   entries={entries}
                   setEntries={setEntries}
-                  deleteEntry={handleDelete}
-                  editEntry={handleEdit}
                 />
               </>
             ) : (
@@ -151,7 +109,6 @@ function App() {
         <Route path="/logout" element={logOut} />
         
       </Routes>
-      <ToastContainer />
     </>
   );
 }

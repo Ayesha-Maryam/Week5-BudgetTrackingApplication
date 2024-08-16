@@ -4,23 +4,27 @@ import AddBudget from "./BudgetForm";
 import "./ShowBudget.css";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
-import { Link } from "react-router-dom";
+import BudgetChart from "./BudgetChart";
 
-export default function ShowBudget({addBudget,entries,
-  deleteEntry,
-  editEntry,
+export default function ShowBudget({
+  addBudget,
+  entries,
   setEntries,
-  users,limit}) {
-  const [editIndex, setEditIndex] = useState();
+  users,
+  limit,
+}) {
   const [updatedEntry, setUpdatedEntry] = useState({});
   const [filterDate, setFilterDate] = useState(new Date());
   const [filteredEntries, setFilteredEntries] = useState([]);
-  const [actionIndex, setActionIndex] = useState(null);
-  const [modalOpen,setModal]=useState(false)
+  const [modalOpen, setModal] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(4);
+
+  const totalPages = Math.ceil(filteredEntries.length / rowsPerPage);
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:8080/budgetUser/${users._id}`, {
+    axios.get(`http://localhost:8080/budgetUser/${users._id}`, {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",
       })
@@ -31,38 +35,69 @@ export default function ShowBudget({addBudget,entries,
       .catch((error) => {
         console.error("Error fetching data", error);
       });
-  }, []);
+  }, [users._id]);
 
   useEffect(() => {
-    console.log('Entries changed.', {entries});
+    console.log("Entries changed.", { entries });
+    filterByDate(filterDate);
+    
   }, [entries]);
 
-
-  const handleDelete = async (index) => {
-    const newEntry = filteredEntries.filter((_, i) => i !== index);
-    setFilteredEntries(newEntry);
-    setEntries(newEntry)
-    deleteEntry(index);
-    // console.log({response});
+  const handleDelete = async (id) => {
+    const newEntries = entries.filter((entry) => entry._id !== id);
+    try {
+      const response = await axios.put(
+        `http://localhost:8080/budgetUser/${users._id}`,
+        {
+          ...users,
+          entries: newEntries,
+        }
+      );
+      if (!response) {
+        throw new Error("Cannot fetch Data");
+      }
+      setEntries(newEntries);
+      
+      setFilteredEntries(newEntries);
+      
+      toast.success("Entry Deleted");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const handleEdit = (index) => {
-    setEditIndex(index);
-    setUpdatedEntry(entries[index]);
+  const handleEdit = (id) => {
+    setEditId(id);
+    setUpdatedEntry(entries.find((en) => en._id === id) || {});
   };
 
-  const handleSave = (index) => {
-    editEntry(index, updatedEntry);
-    setFilteredEntries((prevEntries) => {
-      const newEntries = [...prevEntries];
-      newEntries[editIndex] = updatedEntry;
-      return newEntries;
-    });
-    toast.success("Budget Entry Edited");
-    setEditIndex(null);
+  const handleSave = async () => {
+    const updatedEntries = entries.map((entry) =>
+      entry._id === editId ? updatedEntry : entry
+    );
+    
+
+    try {
+      const response = await axios.put(
+        `http://localhost:8080/budgetUser/${users._id}`,
+        {
+          ...users,
+          entries: updatedEntries,
+        }
+      );
+      if (!response) {
+        throw new Error("Cannot Fetch Data");
+      }
+      setEntries(updatedEntries);
+      setFilteredEntries(updatedEntries);
+      toast.success("Budget Entry Edited");
+      
+    } catch (error) {
+      console.log(error);
+    }
+
+    setEditId(null);
   };
-
-
 
   const filterByDate = (newDate) => {
     const filtered = entries.filter((en) => {
@@ -70,6 +105,31 @@ export default function ShowBudget({addBudget,entries,
     });
     setFilteredEntries(filtered);
   };
+
+  const currentRows = filteredEntries.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  const handlePageChange = (direction) => {
+    setCurrentPage((prevPage) => {
+      if (direction === "next" && prevPage < totalPages) {
+        return prevPage + 1;
+      } else if (direction === "prev" && prevPage > 1) {
+        return prevPage - 1;
+      }
+      return prevPage;
+    });
+  };
+
+  const handleRowsPerPageChange = (e) => {
+    const value = Number(e.target.value);
+    if (value > 0 && value <= filteredEntries.length) {
+      setRowsPerPage(value);
+      setCurrentPage(1);
+    }
+  };
+
   return (
     <div className="container-1">
       <div className="container2">
@@ -93,9 +153,9 @@ export default function ShowBudget({addBudget,entries,
             Reset Filter
           </button>
 
-          
-            <button className="add-btn" onClick={()=>setModal(true)}>Add Budget</button>
-           
+          <button className="add-btn" onClick={() => setModal(true)}>
+            Add Budget
+          </button>
         </div>
         <table className="budget-table">
           <thead>
@@ -107,10 +167,10 @@ export default function ShowBudget({addBudget,entries,
             </tr>
           </thead>
           <tbody>
-            {filteredEntries.map((en, index) => (
-              <tr key={index}>
+            {currentRows.map((en) => (
+              <tr key={en._id}>
                 <td>
-                  {editIndex === index ? (
+                  {editId === en._id ? (
                     <input
                       value={updatedEntry.name}
                       type="text"
@@ -126,7 +186,7 @@ export default function ShowBudget({addBudget,entries,
                   )}
                 </td>
                 <td>
-                  {editIndex === index ? (
+                  {editId === en._id ? (
                     <input
                       value={updatedEntry.price}
                       type="number"
@@ -142,9 +202,9 @@ export default function ShowBudget({addBudget,entries,
                   )}
                 </td>
                 <td>
-                  {editIndex === index ? (
+                  {editId === en._id ? (
                     <input
-                      value={updatedEntry.date}
+                      value={format(updatedEntry.date, "yyyy-MM-dd")|| ""}
                       type="date"
                       onChange={(e) =>
                         setUpdatedEntry({
@@ -154,45 +214,80 @@ export default function ShowBudget({addBudget,entries,
                       }
                     />
                   ) : (
-                    format(new Date(en.date), "yyyy-MM-dd")
+                    format(new Date(en.date || Date.now()), "yyyy-MM-dd")
                   )}
                 </td>
                 <td>
-                  {editIndex === index ? (
-                    <button onClick={() => handleSave(index)}>Save</button>
-                  ) : (
-                    <>
-                      <div className="action-menu">
-                        <button
-                          className="action-dots"
-                          onClick={() =>
-                            setActionIndex(actionIndex === index ? null : index)
-                          }
-                        >
-                          ⋮
-                        </button>
-                        {actionIndex === index && (
-                          <div className="dropdown-menu">
-                            <button onClick={() => handleEdit(index)}>
-                              Edit
-                            </button>
-                            <button onClick={() => handleDelete(index)}>
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </>
+                  {editId === en._id ? (<div className="action-menu">
+                    <button className="save" onClick={handleSave}>Save</button>
+                    <button className="delete" onClick={()=>
+                      {
+                        setEditId(null);   
+                        setUpdatedEntry({});
+                      }
+                    }>Cancel</button>
+                    </div>) : (
+                    <div className="action-menu">
+                      <button className='edit' onClick={() => handleEdit(en._id)}>Edit</button>
+                      <button className="delete" onClick={() => handleDelete(en._id)}>Delete</button>
+                    </div>
                   )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {modalOpen && <AddBudget entries={entries} addBudget={addBudget} limit={limit} modal={modalOpen} setModal={setModal}/>}
-          
+
+        <div className="pagination-controls">
+          <div className="select-rows">
+            <label>
+              Rows per page:
+              <input
+                type="number"
+                value={rowsPerPage}
+                onChange={handleRowsPerPageChange}
+                min="1"
+                max={filteredEntries.length}
+              />
+            </label>
+          </div>
+          <div className="pages">
+            <button
+              onClick={() => handlePageChange("prev")}
+              disabled={currentPage === 1}
+            >
+              &lt;
+            </button>
+            <span>
+              {`${(currentPage - 1) * rowsPerPage + 1}-${Math.min(
+                currentPage * rowsPerPage,
+                filteredEntries.length
+              )} of ${filteredEntries.length}`}
+            </span>
+            <button
+              onClick={() => handlePageChange("next")}
+              disabled={currentPage === totalPages}
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
+        <div className="chart">
+        <BudgetChart entries={entries} budgetLimit={limit} />
+      </div>
+        {modalOpen && (
+          <AddBudget
+            entries={entries}
+            addBudget={addBudget}
+            limit={limit}
+            modal={modalOpen}
+            setModal={setModal}
+          />
+        )}
+
         <ToastContainer />
       </div>
+      
     </div>
   );
 }

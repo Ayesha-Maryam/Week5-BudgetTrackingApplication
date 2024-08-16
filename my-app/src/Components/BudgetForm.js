@@ -9,27 +9,29 @@ export default function AddBudget({addBudget, limit, entries, modal, setModal}) 
     const [name, setName]=useState("");
     const [price, setprice]=useState("");
     const [date, setDate]=useState(new Date().toISOString().slice(0, 10));
-   
+
     const handleSubmit=(e)=>
     {
         e.preventDefault();
-        if(totalSpend>limit)
-        {
-          toast.warn("You have exceeded your budget limit!")
-
+        const totalSpend=entries.reduce((a,b)=>a+parseFloat(b.price),0)
+        const newPrice = parseFloat(price) || 0;
+         if (name && price && date){
+          const newEntry={name, price, date}
+          if(totalSpend + newPrice>limit)
+            {
+              toast.warn("You have exceeded your budget limit!")
+    
+            }
+            else{
+              toast.success("Budget Created")
+            }
+          addBudget(newEntry);
+          setName('');
+          setprice('');
+          setDate(new Date().toISOString().slice(0, 10));
+          }
         }
-        else{
-        const newEntry={name, price, date}
-        addBudget(newEntry);
-        toast.success("Budget Created")
-        setName('');
-        setprice('');
-        setDate(new Date().toISOString().slice(0, 10));
-        }
-        
-
-    }
-    const totalSpend=entries.reduce((a,b)=>a+parseFloat(b.price),0)
+    
   return (
    
     <div className="modal-overlay">
