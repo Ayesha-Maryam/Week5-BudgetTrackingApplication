@@ -118,6 +118,7 @@ export default function SignUp({ login }) {
                   value={budgetLimit}
                   type="number"
                   placeholder="Budget Limit"
+                  min="1"
                   onChange={(e) => setBudgetLimit(e.target.value)}
                   required
                 />
