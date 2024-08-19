@@ -8,11 +8,12 @@ import {
     Title,
     Tooltip,
     Legend,
-  } from 'chart.js';
+} from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import './BudgetChart.css'
+import './BudgetChart.css';
+
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -22,62 +23,82 @@ ChartJS.register(
     Tooltip,
     Legend,
     annotationPlugin
-  );
-  
-  export default function BudgetChart ({ entries, budgetLimit })
-   {
-    const [filteredEntries, setFilteredEntries] = useState(entries);
+);
+
+export default function BudgetChart({ entries, budgetLimit }) {
+    const [filteredEntries, setFilteredEntries] = useState([]);
     const [filter, setFilter] = useState('last12Months');
-  
+
     useEffect(() => {
-      const today = new Date();
-      let filteredData;
-  
-      switch (filter) {
-        case 'lastMonth':
-          filteredData = entries.filter(entry => {
-            const entryDate = new Date(entry.date);
-            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-            return entryDate >= lastMonth;
-          });
-          break;
-        case 'last6Months':
-          filteredData = entries.filter(entry => {
-            const entryDate = new Date(entry.date);
-            const last6Months = new Date(today.getFullYear(), today.getMonth() - 6, today.getDate());
-            return entryDate >= last6Months;
-          });
-          break;
-        case 'last12Months':
-        default:
-          filteredData = entries.filter(entry => {
-            const entryDate = new Date(format(entry.date, "yyyy-MM-dd"));
-            const last12Months = new Date(today.getFullYear(), today.getMonth() - 12, today.getDate());
-            return entryDate >= last12Months;
-          });
-          break;
-      }
-  
-      setFilteredEntries(filteredData);
+        const today = new Date();
+        let startDate;
+
+        switch (filter) {
+            case 'lastMonth':
+                startDate = startOfMonth(subMonths(today, 0));
+                break;
+            case 'last6Months':
+                startDate = startOfMonth(subMonths(today, 5));
+                break;
+            case 'last12Months':
+            default:
+                startDate = startOfMonth(subMonths(today, 11));
+                break;
+        }
+
+        const filteredData = entries
+            .filter(entry => {
+                const entryDate = new Date(entry.date);
+                return entryDate >= startDate && entryDate <= endOfMonth(today);
+            })
+            .map(entry => ({
+                ...entry,
+                date: format(new Date(entry.date), 'yyyy-MM-dd')
+            }))
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const dateMap = new Map();
+
+        filteredData.forEach(entry => {
+            if (dateMap.has(entry.date)) {
+                dateMap.set(entry.date, dateMap.get(entry.date) + entry.price);
+            } else {
+                dateMap.set(entry.date, entry.price);
+            }
+        });
+
+        const cumulativeData = [];
+        let cumulativeSum = 0;
+
+        dateMap.forEach((price, date) => {
+            cumulativeSum += price;
+            cumulativeData.push({ date, price: cumulativeSum });
+        });
+
+        setFilteredEntries(cumulativeData);
     }, [entries, filter]);
-  
+
     const data = {
-      labels: filteredEntries.map(entry => entry.date),
-      datasets: [
-        {
-          label: 'Budget',
-          data: filteredEntries.map(entry => entry.price),
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 2,
-          fill: false,
-        },
-      ],
+        labels: filteredEntries.map(entry => entry.date),
+        datasets: [
+            {
+                label: 'Budget',
+                data: filteredEntries.map(entry => entry.price),
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                fill: false,
+            },
+        ],
     };
-  
+
     const options = {
         scales: {
             x: {
-                type: 'category',
+              label: 'Date',
+              title: {
+                display: true,
+                text: 'Date', 
+            },
                 ticks: {
                     callback: function (value, index) {
                         const date = new Date(filteredEntries[index].date);
@@ -86,6 +107,10 @@ ChartJS.register(
                 },
             },
             y: {
+              title: {
+                display: true,
+                text: 'Budget', 
+            },
                 beginAtZero: true,
             },
         },
@@ -112,18 +137,18 @@ ChartJS.register(
             },
         },
     };
+
     return (
-      <div>
         <div>
-          <label htmlFor="filter">Filter:</label>
-          <select id="filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="lastMonth">Last Month</option>
-            <option value="last6Months">Last 6 Months</option>
-            <option value="last12Months">Last 12 Months</option>
-          </select>
+            <div className='filter-menu'>
+                
+                <button className='filter-btn' onClick={(e) => setFilter('lastMonth')}>Last Month</button>
+                <button className='filter-btn' onClick={(e) => setFilter('last6Months')}>Last 6 Month</button>
+                <button className='filter-btn' onClick={(e) => setFilter('last12Months')}>Last 12 Month</button>
+                
+            </div>
+
+            <Line data={data} options={options} />
         </div>
-  
-        <Line data={data} options={options} />
-      </div>
     );
-  };
+}

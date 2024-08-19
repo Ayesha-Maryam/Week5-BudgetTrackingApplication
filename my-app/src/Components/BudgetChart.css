@@ -15,3 +15,12 @@
     background-color: #0056b3;
   }
   
+  .filter-btn
+  {
+    background-color: orange;
+    border: none;
+  }
+  .filter-menu
+  {
+    margin-bottom: 100px;
+  }
